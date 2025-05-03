@@ -8,9 +8,9 @@ using Rhino.Input.Custom;
 
 namespace Architools
 {
-    public class toolCommand : Command
+    public class WallCommand : Command
     {
-        public toolCommand()
+        public WallCommand()
         {
             // Rhino only creates one instance of each command class defined in a
             // plug-in, so it is safe to store a refence in a static property.
@@ -18,10 +18,10 @@ namespace Architools
         }
 
         ///<summary>The only instance of this command.</summary>
-        public static toolCommand Instance { get; private set; }
+        public static WallCommand Instance { get; private set; }
 
         ///<returns>The command name as it appears on the Rhino command line.</returns>
-        public override string EnglishName => "toolCommand";
+        public override string EnglishName => "WallCommand";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
@@ -29,6 +29,7 @@ namespace Architools
             // ---
 
 
+            Point3d selectedPoint;
 
             // ---
             return Result.Success;
