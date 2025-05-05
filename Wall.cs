@@ -28,7 +28,7 @@ namespace Architools
             Rhino.Input.Custom.OptionDouble heighOption = new Rhino.Input.Custom.OptionDouble(3000, 0, 10000);
             Rhino.Input.Custom.OptionDouble thicknessOption = new Rhino.Input.Custom.OptionDouble(300, 0, 1000);
             string[] listValues = new string[] { "Centre", "Interior", "Exterior" };
-
+            int listIndex = 0;
 
             Rhino.Input.Custom.GetPoint getPoints = new Rhino.Input.Custom.GetPoint();
             getPoints.AcceptNothing(true);
@@ -47,8 +47,7 @@ namespace Architools
                 //Add options to the command instance
                 getPoints.AddOptionDouble("Height", ref heighOption);
                 getPoints.AddOptionDouble("Thichkness", ref thicknessOption);
-                int listIndex = 0;
-                int optList = getPoints.AddOptionList("Alignment", listValues, listIndex);
+                int optList = getPoints.AddOptionList("Alignment", listValues, ref listIndex);
 
                 GetResult getResult = getPoints.Get();
 
