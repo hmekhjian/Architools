@@ -1,7 +1,8 @@
-﻿using System;
-using System.IO;
-using Eto.Drawing;
+﻿using Eto.Drawing;
+using Rhino;
 using Rhino.Geometry;
+using System;
+using System.IO;
 
 namespace Architools
 {
@@ -9,6 +10,7 @@ namespace Architools
     {
         internal static Curve OffsetPolyline(Curve curve, Plane plane, double distance, double tolerance,string alignment, bool Cap = true)
         {
+            RhinoApp.WriteLine($"Alignment received in OffsetPolyline: '{alignment}'");
             Curve OffsetResult = null;
             if (alignment == "Centre")
             {
@@ -33,7 +35,7 @@ namespace Architools
                 {
                     distance = -distance;
                 }
-                Curve[] OffsetCurveArray = curve.Offset(plane, distance, tolerance, CurveOffsetCornerStyle.Sharp);
+                Curve[] OffsetCurveArray = curve.Offset(plane, -distance, tolerance, CurveOffsetCornerStyle.Sharp);
                 Curve OffsetCurve = OffsetCurveArray[0];
                 Curve LineSegment1 = new Line(curve.PointAtStart, OffsetCurve.PointAtStart).ToNurbsCurve();
                 Curve LineSegment2 = new Line(curve.PointAtEnd, OffsetCurve.PointAtEnd).ToNurbsCurve();
@@ -43,8 +45,6 @@ namespace Architools
             }
 
             return OffsetResult;
-
-
     }
 
 

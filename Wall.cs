@@ -22,7 +22,7 @@ namespace Architools
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-           
+
 
             // Define command option types
             Rhino.Input.Custom.OptionDouble heighOption = new Rhino.Input.Custom.OptionDouble(3000, 0, 10000);
@@ -34,6 +34,8 @@ namespace Architools
             getPoints.AcceptNothing(true);
 
             List<Point3d> points = new List<Point3d>();
+            string selectedAlignment = listValues[0];
+            RhinoApp.WriteLine($"Debug RunCommand: Initial selectedAlignment: '{selectedAlignment}'");
 
 
             //While loop to collect points for the creation of the wall
@@ -45,9 +47,10 @@ namespace Architools
                 getPoints.SetCommandPrompt(prompt);
 
                 //Add options to the command instance
+                getPoints.ClearCommandOptions();
                 getPoints.AddOptionDouble("Height", ref heighOption);
-                getPoints.AddOptionDouble("Thichkness", ref thicknessOption);
-                int optList = getPoints.AddOptionList("Alignment", listValues, ref listIndex);
+                getPoints.AddOptionDouble("Thickness", ref thicknessOption);
+                int optList = getPoints.AddOptionList("Alignment", listValues, listIndex);
 
                 GetResult getResult = getPoints.Get();
 
@@ -59,10 +62,17 @@ namespace Architools
                 }
                 else if (getResult == GetResult.Option)
                 {
-                    continue;
+                    if (getPoints.Option().Index == optList)
+                    {
+                        selectedAlignment = getPoints.Option().StringOptionValue;
+                        listIndex = getPoints.Option().CurrentListOptionIndex;
+                        RhinoApp.WriteLine($"Debug RunCommand: selectedAlignment updated to '{selectedAlignment}' after option selection.");
+                        continue;
+                    }
                 }
                 else if (getResult == GetResult.Nothing)
                 {
+                    RhinoApp.WriteLine($"Debug RunCommand: GetResult.Nothing received. Breaking loop. Final selectedAlignment before break: '{selectedAlignment}'");
                     break;
                 }
                 else if (getResult == GetResult.Cancel)
@@ -75,41 +85,42 @@ namespace Architools
                     RhinoApp.WriteLine($"Unexpected input result: {getResult}");
                     return Result.Failure;
                 }
-            }
+                }
 
-             //Check if enough points were selected
+            RhinoApp.WriteLine($"Debug RunCommand: Loop broken. selectedAlignment before calling OffsetPolyline: '{selectedAlignment}'");
+            //Check if enough points were selected
 
             if (points.Count < 2)
-            {
-                RhinoApp.WriteLine("Not enough points selected to generate wall, at least 2 points are required");
-                return Result.Failure;
-            }
-          
-            PolylineCurve WallPath = new PolylineCurve(points);
-            Curve WallPathOffset = GeometryHelpers.OffsetPolyline(WallPath, Plane.WorldXY, thicknessOption.CurrentValue, 0.1);
-            Extrusion Wall = GeometryHelpers.ExtrudeCurve(WallPathOffset, Plane.WorldXY, heighOption.CurrentValue, true);
-
-            // Add created objects to the document
-            if (Wall != null) // Check if extrusion succeeded
-            {
-                Brep wallBrep = Wall.ToBrep(); // Convert Extrusion to Brep
-                if (wallBrep != null)
                 {
-                    doc.Objects.AddBrep(wallBrep); // Use AddBrep or Add(Brep)
-                    doc.Views.Redraw();
+                    RhinoApp.WriteLine("Not enough points selected to generate wall, at least 2 points are required");
+                    return Result.Failure;
+                }
+
+                PolylineCurve WallPath = new PolylineCurve(points);
+                Curve WallPathOffset = GeometryHelpers.OffsetPolyline(WallPath, Plane.WorldXY, thicknessOption.CurrentValue, 0.1, selectedAlignment);
+                Extrusion Wall = GeometryHelpers.ExtrudeCurve(WallPathOffset, Plane.WorldXY, heighOption.CurrentValue, true);
+
+                // Add created objects to the document
+                if (Wall != null) // Check if extrusion succeeded
+                {
+                    Brep wallBrep = Wall.ToBrep(); // Convert Extrusion to Brep
+                    if (wallBrep != null)
+                    {
+                        doc.Objects.AddBrep(wallBrep); // Use AddBrep or Add(Brep)
+                        doc.Views.Redraw();
+                    }
+                    else
+                    {
+                        RhinoApp.WriteLine("Failed to convert extrusion to Brep.");
+                    }
                 }
                 else
                 {
-                    RhinoApp.WriteLine("Failed to convert extrusion to Brep.");
+                    RhinoApp.WriteLine("Failed to create wall extrusion.");
                 }
-            }
-            else
-            {
-                RhinoApp.WriteLine("Failed to create wall extrusion.");
-            }
 
 
-            return Result.Success;
+                return Result.Success;
+            }
         }
     }
-}
