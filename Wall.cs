@@ -64,7 +64,7 @@ namespace Architools
                 {
                     if (getPoints.Option().Index == optList)
                     {
-                        selectedAlignment = getPoints.Option().StringOptionValue;
+                        selectedAlignment = listValues[getPoints.Option().CurrentListOptionIndex];
                         listIndex = getPoints.Option().CurrentListOptionIndex;
                         RhinoApp.WriteLine($"Debug RunCommand: selectedAlignment updated to '{selectedAlignment}' after option selection.");
                         continue;
