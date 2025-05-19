@@ -35,6 +35,10 @@ namespace Architools
 
             List<Point3d> points = new List<Point3d>();
             string selectedAlignment = listValues[0];
+            bool useExistingCurve = false;
+            Curve inputCurve = null;
+
+
             RhinoApp.WriteLine($"Debug RunCommand: Initial selectedAlignment: '{selectedAlignment}'");
 
 
@@ -51,6 +55,7 @@ namespace Architools
                 getPoints.AddOptionDouble("Height", ref heighOption);
                 getPoints.AddOptionDouble("Thickness", ref thicknessOption);
                 int optList = getPoints.AddOptionList("Alignment", listValues, listIndex);
+                int optFromCurve = getPoints.AddOption("From Curve");
 
                 GetResult getResult = getPoints.Get();
 
@@ -68,6 +73,12 @@ namespace Architools
                         listIndex = getPoints.Option().CurrentListOptionIndex;
                         RhinoApp.WriteLine($"Debug RunCommand: selectedAlignment updated to '{selectedAlignment}' after option selection.");
                         continue;
+                    }
+
+                    else if (getPoints.Option().Index == optFromCurve)
+                    {
+                        useExistingCurve = true;
+                        break
                     }
                 }
                 else if (getResult == GetResult.Nothing)
@@ -90,7 +101,31 @@ namespace Architools
             RhinoApp.WriteLine($"Debug RunCommand: Loop broken. selectedAlignment before calling OffsetPolyline: '{selectedAlignment}'");
             //Check if enough points were selected
 
-            if (points.Count < 2)
+            if (selectedAlignment)
+            {
+                Rhino.Input.Custom.GetObject getObject = new Rhino.Input.Custom.GetObject();
+                getObject.SetCommandPrompt("Select existing curve for wall path");
+                getObject.GeometryFilter = Rhino.DocObjects.ObjectType.Curve;
+                getObject.DeselectAllBeforePostSelect = false;
+                getObject.EnablePreSelect(true, true);
+
+                GetResult getObjResult = getObject.Get();
+
+                // TODO Add the result logic by adding 
+
+                if (getObjResult == GetResult.Object)
+                {
+                    inputCurve = getObject.Object(0).Curve();
+                }
+
+                else if (getObjResult == getObject.Option())
+
+            }
+
+            else
+            {
+
+                if (points.Count < 2)
                 {
                     RhinoApp.WriteLine("Not enough points selected to generate wall, at least 2 points are required");
                     return Result.Failure;
@@ -124,3 +159,6 @@ namespace Architools
             }
         }
     }
+            }
+
+
