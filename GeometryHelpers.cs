@@ -8,7 +8,7 @@ namespace Architools
 {
     internal static class GeometryHelpers
     {
-        internal static Curve OffsetPolyline(Curve curve, Plane plane, double distance, double tolerance,string alignment, bool Cap = true)
+        internal static Curve OffsetOpenPolyline(Curve curve, Plane plane, double distance, double tolerance,string alignment)
         {
             RhinoApp.WriteLine($"Alignment received in OffsetPolyline: '{alignment}'");
             Curve OffsetResult = null;
@@ -24,8 +24,8 @@ namespace Architools
                 Curve CurveSegmentLeft = new Line(OffsetCurveLeft.PointAtStart, OffsetCurveRight.PointAtStart).ToNurbsCurve();
                 Curve CurveSegmentRight = new Line(OffsetCurveLeft.PointAtEnd, OffsetCurveRight.PointAtEnd).ToNurbsCurve();
 
-                Curve[] curveCollection = new Curve[] { OffsetCurveLeft, OffsetCurveRight, CurveSegmentLeft, CurveSegmentRight };
-                Curve[] OffsetResultArray = Curve.JoinCurves(curveCollection);
+                Curve[] CurveCollection = new Curve[] { OffsetCurveLeft, OffsetCurveRight, CurveSegmentLeft, CurveSegmentRight };
+                Curve[] OffsetResultArray = Curve.JoinCurves(CurveCollection);
                 OffsetResult = OffsetResultArray[0];
             }
 
@@ -39,13 +39,47 @@ namespace Architools
                 Curve OffsetCurve = OffsetCurveArray[0];
                 Curve LineSegment1 = new Line(curve.PointAtStart, OffsetCurve.PointAtStart).ToNurbsCurve();
                 Curve LineSegment2 = new Line(curve.PointAtEnd, OffsetCurve.PointAtEnd).ToNurbsCurve();
-                Curve[] curveCollection = new Curve[] { curve, OffsetCurve, LineSegment1, LineSegment2 };
-                Curve[] OffsetResultArray = Curve.JoinCurves(curveCollection);
+                Curve[] CurveCollection = new Curve[] { curve, OffsetCurve, LineSegment1, LineSegment2 };
+                Curve[] OffsetResultArray = Curve.JoinCurves(CurveCollection);
                 OffsetResult = OffsetResultArray[0];
             }
 
             return OffsetResult;
     }
+
+        internal static Curve OffsetClosedPolyline(Curve curve, Plane plane, double distance, double tolerance, string alignment, bool Cap = true)
+        {
+            Curve OffsetResult = null;
+            if (alignment == "Centre")
+            {
+                double halfDistance = distance / 2.0;
+                var ExteriorCurveArray = curve.Offset(plane, halfDistance, tolerance, CurveOffsetCornerStyle.Sharp);
+                var ExteriorCurve = ExteriorCurveArray[0];
+                var InteriorCurveArray = curve.Offset(plane, -halfDistance, tolerance, CurveOffsetCornerStyle.Sharp);
+                var InteriorCurve = InteriorCurveArray[0];
+                var CurveCollection = new Curve[] { ExteriorCurve, InteriorCurve };
+                return CurveCollection
+            }
+
+            else
+            {
+                if (alignment == "Interior")
+                {
+                    distance = -distance;
+                }
+
+                var OffsetCurveArray = curve.Offset(plane, halfDistance, tolerance, CurveOffsetCornerStyle.Sharp);
+                var OffsetCurve = OffsetCurveArray[0];
+                if (alignment == "Interior")
+                {
+                    
+                }
+                var CurveCollection = new Curve[] { curve, OffsetCurve}
+            }
+            
+
+
+        }
 
 
 

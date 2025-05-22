@@ -180,8 +180,15 @@ namespace Architools
                 inputCurve = new PolylineCurve(points);
             }
 
-                Curve WallPathOffset = GeometryHelpers.OffsetPolyline(inputCurve, Plane.WorldXY, thicknessOption.CurrentValue, 0.1, selectedAlignment);
+            if (inputCurve.IsClosed)
+            {
+
+            }
+            else
+            {
+                Curve WallPathOffset = GeometryHelpers.OffsetOpenPolyline(inputCurve, Plane.WorldXY, thicknessOption.CurrentValue, 0.1, selectedAlignment);
                 Extrusion Wall = GeometryHelpers.ExtrudeCurve(WallPathOffset, Plane.WorldXY, heighOption.CurrentValue, true);
+            }
 
                 // Add created objects to the document
                 if (Wall != null) // Check if extrusion succeeded
