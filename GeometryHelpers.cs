@@ -47,9 +47,18 @@ namespace Architools
             return OffsetResult;
     }
 
-        internal static Curve OffsetClosedPolyline(Curve curve, Plane plane, double distance, double tolerance, string alignment, bool Cap = true)
+        internal static Curve[] OffsetClosedPolyline(Curve curve, Plane plane, double distance, double tolerance, string alignment, bool Cap = true)
         {
-            Curve OffsetResult = null;
+            if (curve == null)
+            {
+                throw new ArgumentNullException(nameof(curve), "Input curve cannot be null");
+            }
+
+            if (!curve.IsClosed)
+            {
+                throw new ArgumentException("Input curve must be closed", nameof(curve));
+            }
+            Curve[] OffsetResult = null;
             if (alignment == "Centre")
             {
                 double halfDistance = distance / 2.0;
@@ -57,8 +66,8 @@ namespace Architools
                 var ExteriorCurve = ExteriorCurveArray[0];
                 var InteriorCurveArray = curve.Offset(plane, -halfDistance, tolerance, CurveOffsetCornerStyle.Sharp);
                 var InteriorCurve = InteriorCurveArray[0];
-                var CurveCollection = new Curve[] { ExteriorCurve, InteriorCurve };
-                return CurveCollection
+                OffsetResult = new Curve[] { ExteriorCurve, InteriorCurve };
+                return OffsetResult;
             }
 
             else
@@ -68,20 +77,13 @@ namespace Architools
                     distance = -distance;
                 }
 
-                var OffsetCurveArray = curve.Offset(plane, halfDistance, tolerance, CurveOffsetCornerStyle.Sharp);
+                var OffsetCurveArray = curve.Offset(plane, distance, tolerance, CurveOffsetCornerStyle.Sharp);
                 var OffsetCurve = OffsetCurveArray[0];
-                if (alignment == "Interior")
-                {
-                    
+                OffsetResult = (alignment == "Interior") ? new Curve[] { OffsetCurve, curve } : new Curve[] { curve, OffsetCurve };
                 }
-                var CurveCollection = new Curve[] { curve, OffsetCurve}
+                return OffsetResult;
             }
             
-
-
-        }
-
-
 
 
         internal static Extrusion ExtrudeCurve(Curve curve, Plane plane, double height, bool cap)
