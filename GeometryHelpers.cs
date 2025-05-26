@@ -86,9 +86,18 @@ namespace Architools
             
 
 
-        internal static Extrusion ExtrudeCurve(Curve curve, Plane plane, double height, bool cap)
+        internal static Extrusion ExtrudeOpenCurve(Curve curve, Plane plane, double height, bool cap)
         {
             Extrusion ExtrusionResult = Extrusion.Create(curve, plane, height, cap);
+            return ExtrusionResult;
+        }
+
+        internal static Brep ExtrudeClosedCurves(Curve[] inputCurves, Plane plane, double height, bool cap)
+        {
+            Brep Extrusion1 = Extrusion.Create(inputCurves[0], plane, height, cap).ToBrep();
+            Brep Extrusion2 = Extrusion.Create(inputCurves[1], plane, height, cap).ToBrep();
+            Brep[] ExtrusionResultArray = Brep.CreateBooleanDifference(Extrusion2, Extrusion1, 0.1);
+            Brep ExtrusionResult = ExtrusionResultArray[0];
             return ExtrusionResult;
         }
     }

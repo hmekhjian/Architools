@@ -38,6 +38,7 @@ namespace Architools
             string selectedAlignment = listValues[0];
             bool useExistingCurve = false;
             Curve inputCurve = null;
+            Brep Wall = null;
 
 
             //RhinoApp.WriteLine($"Debug RunCommand: Initial selectedAlignment: '{selectedAlignment}'");
@@ -182,18 +183,20 @@ namespace Architools
 
             if (inputCurve.IsClosed)
             {
+                Curve[] WallPathOffsets = GeometryHelpers.OffsetClosedPolyline(inputCurve, Plane.WorldXY, thicknessOption.CurrentValue, 0.1, selectedAlignment);
+                Wall = GeometryHelpers.ExtrudeClosedCurves(WallPathOffsets, Plane.WorldXY, heighOption.CurrentValue, true);
 
             }
             else
             {
                 Curve WallPathOffset = GeometryHelpers.OffsetOpenPolyline(inputCurve, Plane.WorldXY, thicknessOption.CurrentValue, 0.1, selectedAlignment);
-                Extrusion Wall = GeometryHelpers.ExtrudeCurve(WallPathOffset, Plane.WorldXY, heighOption.CurrentValue, true);
+                Wall = GeometryHelpers.ExtrudeOpenCurve(WallPathOffset, Plane.WorldXY, heighOption.CurrentValue, true).ToBrep();
             }
 
                 // Add created objects to the document
                 if (Wall != null) // Check if extrusion succeeded
                 {
-                    Brep wallBrep = Wall.ToBrep(); // Convert Extrusion to Brep
+                    Brep wallBrep = Wall; // Convert Extrusion to Brep
                     if (wallBrep != null)
                     {
                         doc.Objects.AddBrep(wallBrep); // Use AddBrep or Add(Brep)
