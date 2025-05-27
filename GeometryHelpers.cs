@@ -92,13 +92,31 @@ namespace Architools
             return ExtrusionResult;
         }
 
-        internal static Brep ExtrudeClosedCurves(Curve[] inputCurves, Plane plane, double height, bool cap)
+        internal static Brep ExtrudeClosedCurves(Curve[] inputCurves, Plane plane, double height, bool cap, string alignment)
         {
             Brep Extrusion1 = Extrusion.Create(inputCurves[0], plane, height, cap).ToBrep();
             Brep Extrusion2 = Extrusion.Create(inputCurves[1], plane, height, cap).ToBrep();
-            Brep[] ExtrusionResultArray = Brep.CreateBooleanDifference(Extrusion2, Extrusion1, 0.1);
+            Brep[] ExtrusionResultArray = null;
+
+
+            //Debug Extrusions
+            RhinoDoc.ActiveDoc.Objects.AddBrep(Extrusion1);
+            RhinoDoc.ActiveDoc.Objects.AddBrep(Extrusion2);
+            RhinoDoc.ActiveDoc.Views.Redraw();
+
+            if (alignment == "Centre")
+            {
+                RhinoApp.WriteLine($"{alignment}");
+                ExtrusionResultArray = Brep.CreateBooleanDifference(Extrusion2, Extrusion1, 0.1);
+            }
+            else
+            {
+                RhinoApp.WriteLine($"{alignment}");
+                ExtrusionResultArray = Brep.CreateBooleanDifference(Extrusion1, Extrusion2, 0.1);
+            }
+
             Brep ExtrusionResult = ExtrusionResultArray[0];
             return ExtrusionResult;
-        }
+    }
     }
 }

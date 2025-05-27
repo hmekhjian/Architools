@@ -184,7 +184,7 @@ namespace Architools
             if (inputCurve.IsClosed)
             {
                 Curve[] WallPathOffsets = GeometryHelpers.OffsetClosedPolyline(inputCurve, Plane.WorldXY, thicknessOption.CurrentValue, 0.1, selectedAlignment);
-                Wall = GeometryHelpers.ExtrudeClosedCurves(WallPathOffsets, Plane.WorldXY, heighOption.CurrentValue, true);
+                Wall = GeometryHelpers.ExtrudeClosedCurves(WallPathOffsets, Plane.WorldXY, heighOption.CurrentValue, true, selectedAlignment);
 
             }
             else
