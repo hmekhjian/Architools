@@ -100,9 +100,9 @@ namespace Architools
 
 
             //Debug Extrusions
-            RhinoDoc.ActiveDoc.Objects.AddBrep(Extrusion1);
-            RhinoDoc.ActiveDoc.Objects.AddBrep(Extrusion2);
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            //RhinoDoc.ActiveDoc.Objects.AddBrep(Extrusion1);
+            //RhinoDoc.ActiveDoc.Objects.AddBrep(Extrusion2);
+            //RhinoDoc.ActiveDoc.Views.Redraw();
 
             if (alignment == "Centre")
             {

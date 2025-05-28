@@ -42,6 +42,7 @@ namespace Architools
 
 
             //RhinoApp.WriteLine($"Debug RunCommand: Initial selectedAlignment: '{selectedAlignment}'");
+            // TODO Fix dynamic drawing to show the actual 3D volume
             System.EventHandler<Rhino.Input.Custom.GetPointDrawEventArgs> dynamicDrawHandler = (sender, e_draw) =>
             {
                 List<Point3d> previewPoints = new List<Point3d>(points);
@@ -83,7 +84,7 @@ namespace Architools
                 getPoints.SetCommandPrompt(prompt);
                 getPoints.DynamicDraw += (sender
                     , e) => e.Display.DrawPolyline(points, System.Drawing.Color.DarkRed);
-                
+
 
                 //Add options to the command instance
                 getPoints.ClearCommandOptions();
@@ -106,7 +107,7 @@ namespace Architools
                     {
                         selectedAlignment = listValues[getPoints.Option().CurrentListOptionIndex];
                         listIndex = getPoints.Option().CurrentListOptionIndex;
-                       // RhinoApp.WriteLine($"Debug RunCommand: selectedAlignment updated to '{selectedAlignment}' after option selection.");
+                        // RhinoApp.WriteLine($"Debug RunCommand: selectedAlignment updated to '{selectedAlignment}' after option selection.");
                         continue;
                     }
 
@@ -118,7 +119,7 @@ namespace Architools
                 }
                 else if (getResult == GetResult.Nothing)
                 {
-                   // RhinoApp.WriteLine($"Debug RunCommand: GetResult.Nothing received. Breaking loop. Final selectedAlignment before break: '{selectedAlignment}'");
+                    // RhinoApp.WriteLine($"Debug RunCommand: GetResult.Nothing received. Breaking loop. Final selectedAlignment before break: '{selectedAlignment}'");
                     break;
                 }
                 else if (getResult == GetResult.Cancel)
@@ -131,8 +132,8 @@ namespace Architools
                     RhinoApp.WriteLine($"Unexpected input result: {getResult}");
                     return Result.Failure;
                 }
-                }
-            
+            }
+
             // Unsubscribe from event handler
             getPoints.DynamicDraw -= dynamicDrawHandler;
 
@@ -146,23 +147,37 @@ namespace Architools
                 getObject.DeselectAllBeforePostSelect = false;
                 getObject.EnablePreSelect(true, true);
 
-                GetResult getObjResult = getObject.Get();
+                while (true)
+                {
+                    int optList = getObject.AddOptionList("Alignment", listValues, listIndex);
 
 
-                if (getObjResult == GetResult.Object)
-                {
-                    inputCurve = getObject.Object(0).Curve();
-                }
+                    GetResult getObjResult = getObject.Get();
 
-                else if (getObjResult == GetResult.Cancel)
-                {
-                    RhinoApp.WriteLine("Command was cancelled");
-                    return Result.Cancel;
-                }
-                else
-                {
-                    RhinoApp.WriteLine("Unexpected input result");
-                    return Result.Failure;
+
+                    if (getObjResult == GetResult.Object)
+                    {
+                        inputCurve = getObject.Object(0).Curve();
+                    }
+
+                    else if (getObjResult == GetResult.Option)
+                    {
+                        selectedAlignment = listValues[getObject.Option().CurrentListOptionIndex];
+                        listIndex = getObject.Option().CurrentListOptionIndex;
+
+                    }
+
+                    else if (getObjResult == GetResult.Cancel)
+                    {
+                        RhinoApp.WriteLine("Command was cancelled");
+                        return Result.Cancel;
+                    }
+                    else
+                    {
+                        RhinoApp.WriteLine("Unexpected input result");
+                        return Result.Failure;
+                    }
+
                 }
 
             }
@@ -170,7 +185,7 @@ namespace Architools
             else
             {
 
-            //Check if enough points were selected
+                //Check if enough points were selected
                 if (points.Count < 2)
                 {
                     RhinoApp.WriteLine("Not enough points selected to generate wall, at least 2 points are required");
@@ -193,29 +208,29 @@ namespace Architools
                 Wall = GeometryHelpers.ExtrudeOpenCurve(WallPathOffset, Plane.WorldXY, heighOption.CurrentValue, true).ToBrep();
             }
 
-                // Add created objects to the document
-                if (Wall != null) // Check if extrusion succeeded
+            // Add created objects to the document
+            if (Wall != null) // Check if extrusion succeeded
+            {
+                Brep wallBrep = Wall; // Convert Extrusion to Brep
+                if (wallBrep != null)
                 {
-                    Brep wallBrep = Wall; // Convert Extrusion to Brep
-                    if (wallBrep != null)
-                    {
-                        doc.Objects.AddBrep(wallBrep); // Use AddBrep or Add(Brep)
-                        doc.Views.Redraw();
-                    }
-                    else
-                    {
-                        RhinoApp.WriteLine("Failed to convert extrusion to Brep.");
-                    }
+                    doc.Objects.AddBrep(wallBrep); // Use AddBrep or Add(Brep)
+                    doc.Views.Redraw();
                 }
                 else
                 {
-                    RhinoApp.WriteLine("Failed to create wall extrusion.");
+                    RhinoApp.WriteLine("Failed to convert extrusion to Brep.");
                 }
-
-
-                return Result.Success;
             }
+            else
+            {
+                RhinoApp.WriteLine("Failed to create wall extrusion.");
+            }
+
+
+            return Result.Success;
         }
     }
+}
 
 
