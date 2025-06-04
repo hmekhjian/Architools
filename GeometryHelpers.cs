@@ -4,17 +4,19 @@ using Rhino.Geometry;
 using System;
 using System.IO;
 
+
+// TODO Set all tolerances to the document tolerance not the static 0.1 value
 namespace Architools
 {
     internal static class GeometryHelpers
     {
-        internal static Curve OffsetOpenPolyline(Curve curve, Plane plane, double distance, double tolerance,string alignment)
+        internal static Curve OffsetOpenPolyline(Curve curve, Plane plane, double distance, double tolerance, string alignment)
         {
             RhinoApp.WriteLine($"Alignment received in OffsetPolyline: '{alignment}'");
             Curve OffsetResult = null;
             if (alignment == "Centre")
             {
-                double halfDistance= distance / 2.0;
+                double halfDistance = distance / 2.0;
                 Curve[] OffsetCurveArrayLeft = curve.Offset(plane, halfDistance, tolerance, CurveOffsetCornerStyle.Sharp);
                 Curve OffsetCurveLeft = OffsetCurveArrayLeft[0];
 
@@ -45,7 +47,7 @@ namespace Architools
             }
 
             return OffsetResult;
-    }
+        }
 
         internal static Curve[] OffsetClosedPolyline(Curve curve, Plane plane, double distance, double tolerance, string alignment, bool Cap = true)
         {
@@ -60,30 +62,60 @@ namespace Architools
             }
             Curve[] OffsetResult = null;
             if (alignment == "Centre")
+                // TODO Implement CW and CWW detection on this alignment to keep consisten t ouptout simlar to below.
             {
                 double halfDistance = distance / 2.0;
                 var ExteriorCurveArray = curve.Offset(plane, halfDistance, tolerance, CurveOffsetCornerStyle.Sharp);
                 var ExteriorCurve = ExteriorCurveArray[0];
                 var InteriorCurveArray = curve.Offset(plane, -halfDistance, tolerance, CurveOffsetCornerStyle.Sharp);
                 var InteriorCurve = InteriorCurveArray[0];
+
+                //Debug curve direction
+                //RhinoDoc.ActiveDoc.Objects.AddCurve(ExteriorCurve);
+                //RhinoDoc.ActiveDoc.Objects.AddCurve(InteriorCurve);
+                //RhinoApp.WriteLine($"External curve direction is: {ExteriorCurve.ClosedCurveOrientation()}");
+                //RhinoApp.WriteLine($"Internal curve direction is: {InteriorCurve.ClosedCurveOrientation()}");
+                //RhinoDoc.ActiveDoc.Views.Redraw();
+
                 OffsetResult = new Curve[] { ExteriorCurve, InteriorCurve };
                 return OffsetResult;
             }
 
             else
+
             {
-                if (alignment == "Interior")
+                if (curve.ClosedCurveOrientation().ToString() == "Clockwise")
                 {
-                    distance = -distance;
+
+                    if (alignment == "Exterior")
+                    {
+                        distance = -distance;
+                    }
+
+                    var OffsetCurveArray = curve.Offset(plane, distance, tolerance, CurveOffsetCornerStyle.Sharp);
+                    var OffsetCurve = OffsetCurveArray[0];
+                    OffsetResult = new Curve[] { OffsetCurve, curve };
+
+                    //RhinoApp.WriteLine($"OffsetCurve curve direction is: {OffsetCurve.ClosedCurveOrientation()}");
+                    //RhinoApp.WriteLine($"Curve curve direction is: {curve.ClosedCurveOrientation()}");
                 }
 
-                var OffsetCurveArray = curve.Offset(plane, distance, tolerance, CurveOffsetCornerStyle.Sharp);
-                var OffsetCurve = OffsetCurveArray[0];
-                OffsetResult = (alignment == "Interior") ? new Curve[] { OffsetCurve, curve } : new Curve[] { curve, OffsetCurve };
+                else if (curve.ClosedCurveOrientation().ToString() == "CounterClockwise")
+                {
+
+                    if (alignment == "Interior")
+                    {
+                        distance = -distance;
+                    }
+
+                    var OffsetCurveArray = curve.Offset(plane, distance, tolerance, CurveOffsetCornerStyle.Sharp);
+                    var OffsetCurve = OffsetCurveArray[0];
+                    OffsetResult = new Curve[] { OffsetCurve, curve };
                 }
                 return OffsetResult;
             }
-            
+        }
+
 
 
         internal static Extrusion ExtrudeOpenCurve(Curve curve, Plane plane, double height, bool cap)
@@ -94,8 +126,8 @@ namespace Architools
 
         internal static Brep ExtrudeClosedCurves(Curve[] inputCurves, Plane plane, double height, bool cap, string alignment)
         {
-            Brep Extrusion1 = Extrusion.Create(inputCurves[0], plane, height, cap).ToBrep();
-            Brep Extrusion2 = Extrusion.Create(inputCurves[1], plane, height, cap).ToBrep();
+            Brep OffsetExtrusion = Extrusion.Create(inputCurves[0], plane, height, cap).ToBrep();
+            Brep CurveExtrusion = Extrusion.Create(inputCurves[1], plane, height, cap).ToBrep();
             Brep[] ExtrusionResultArray = null;
 
 
@@ -107,16 +139,22 @@ namespace Architools
             if (alignment == "Centre")
             {
                 RhinoApp.WriteLine($"{alignment}");
-                ExtrusionResultArray = Brep.CreateBooleanDifference(Extrusion2, Extrusion1, 0.1);
+                ExtrusionResultArray = Brep.CreateBooleanDifference(CurveExtrusion, OffsetExtrusion, 0.1);
+            }
+
+            else if (alignment == "Interior")
+            {
+
+                ExtrusionResultArray = Brep.CreateBooleanDifference(CurveExtrusion, OffsetExtrusion, 0.1);
             }
             else
             {
                 RhinoApp.WriteLine($"{alignment}");
-                ExtrusionResultArray = Brep.CreateBooleanDifference(Extrusion1, Extrusion2, 0.1);
+                ExtrusionResultArray = Brep.CreateBooleanDifference(OffsetExtrusion, CurveExtrusion, 0.1);
             }
 
             Brep ExtrusionResult = ExtrusionResultArray[0];
             return ExtrusionResult;
-    }
+        }
     }
 }

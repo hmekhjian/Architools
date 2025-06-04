@@ -158,13 +158,18 @@ namespace Architools
                     if (getObjResult == GetResult.Object)
                     {
                         inputCurve = getObject.Object(0).Curve();
+                        if (inputCurve != null)
+                            break;
                     }
 
                     else if (getObjResult == GetResult.Option)
                     {
-                        selectedAlignment = listValues[getObject.Option().CurrentListOptionIndex];
-                        listIndex = getObject.Option().CurrentListOptionIndex;
-
+                        if (getObject.Option().Index == optList)
+                        {
+                            selectedAlignment = listValues[getObject.Option().CurrentListOptionIndex];
+                            listIndex = getObject.Option().CurrentListOptionIndex;
+                        }
+                        continue;
                     }
 
                     else if (getObjResult == GetResult.Cancel)
