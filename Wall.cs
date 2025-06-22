@@ -1,8 +1,10 @@
 ﻿using Rhino;
 using Rhino.Commands;
 using Rhino.Display;
+using Rhino.DocObjects;
 using Rhino.Geometry;
 using Rhino.Input;
+using Rhino.Input.Custom;
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
@@ -30,6 +32,7 @@ namespace Architools
             Rhino.Input.Custom.OptionDouble thicknessOption = new Rhino.Input.Custom.OptionDouble(300, 0, 1000);
             string[] listValues = new string[] { "Centre", "Interior", "Exterior" };
             int listIndex = 0;
+            Rhino.Input.Custom.OptionToggle deleteInput = new Rhino.Input.Custom.OptionToggle(false, "False", "True");
 
             Rhino.Input.Custom.GetPoint getPoints = new Rhino.Input.Custom.GetPoint();
             getPoints.AcceptNothing(true);
@@ -37,6 +40,7 @@ namespace Architools
             List<Point3d> points = new List<Point3d>();
             string selectedAlignment = listValues[0];
             bool useExistingCurve = false;
+            ObjRef inputObject = null;  
             Curve inputCurve = null;
             Brep Wall = null;
 
@@ -146,7 +150,8 @@ namespace Architools
                 getObject.GeometryFilter = Rhino.DocObjects.ObjectType.Curve;
                 getObject.DeselectAllBeforePostSelect = false;
                 getObject.EnablePreSelect(true, true);
-
+                getObject.AddOptionToggle("DeleteInput", ref deleteInput);
+               
                 while (true)
                 {
                     int optList = getObject.AddOptionList("Alignment", listValues, listIndex);
@@ -157,6 +162,7 @@ namespace Architools
 
                     if (getObjResult == GetResult.Object)
                     {
+                        inputObject = getObject.Object(0);
                         inputCurve = getObject.Object(0).Curve();
                         if (inputCurve != null)
                             break;
@@ -220,6 +226,8 @@ namespace Architools
                 if (wallBrep != null)
                 {
                     doc.Objects.AddBrep(wallBrep); // Use AddBrep or Add(Brep)
+                    if (deleteInput.CurrentValue)
+                        { RhinoDoc.ActiveDoc.Objects.Delete(inputObject.ObjectId, false); }
                     doc.Views.Redraw();
                 }
                 else
