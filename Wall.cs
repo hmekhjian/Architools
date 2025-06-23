@@ -23,9 +23,17 @@ namespace Architools
 
         public override string EnglishName => "CreateWall";
 
+        private enum CommandState
+        {
+            CollectPoints,
+            SelectCurve
+        }
+
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
 
+
+            CommandState currentState = CommandState.CollectPoints;
 
             // Define command option types
             Rhino.Input.Custom.OptionDouble heighOption = new Rhino.Input.Custom.OptionDouble(3000, 0, 10000);
@@ -40,7 +48,7 @@ namespace Architools
             List<Point3d> points = new List<Point3d>();
             string selectedAlignment = listValues[0];
             bool useExistingCurve = false;
-            ObjRef inputObject = null;  
+            ObjRef inputObject = null;
             Curve inputCurve = null;
             Brep Wall = null;
 
@@ -79,81 +87,94 @@ namespace Architools
             //Subscribe to dynamic draw event handler
             getPoints.DynamicDraw += dynamicDrawHandler;
 
-            //While loop to collect points for the creation of the wall
             while (true)
             {
-                string prompt = (points.Count == 0)
-                    ? "Select first point of the wall"
-                    : "Select next point of the wall or press Enter when done";
-                getPoints.SetCommandPrompt(prompt);
-                getPoints.DynamicDraw += (sender
-                    , e) => e.Display.DrawPolyline(points, System.Drawing.Color.DarkRed);
-
-
-                //Add options to the command instance
-                getPoints.ClearCommandOptions();
-                getPoints.AddOptionDouble("Height", ref heighOption);
-                getPoints.AddOptionDouble("Thickness", ref thicknessOption);
-                int optList = getPoints.AddOptionList("Alignment", listValues, listIndex);
-                int optFromCurve = getPoints.AddOption("FromCurve");
-
-                GetResult getResult = getPoints.Get();
-
-                if (getResult == GetResult.Point)
+                if (currentState == CommandState.CollectPoints)
                 {
-                    points.Add(getPoints.Point());
-                    doc.Views.Redraw();
-                    continue;
-                }
-                else if (getResult == GetResult.Option)
-                {
-                    if (getPoints.Option().Index == optList)
+                    string prompt = (points.Count == 0)
+                                       ? "Select first point of the wall"
+                                       : "Select next point of the wall or press Enter when done";
+                    getPoints.SetCommandPrompt(prompt);
+                    getPoints.DynamicDraw += (sender
+                        , e) => e.Display.DrawPolyline(points, System.Drawing.Color.DarkRed);
+
+
+                    //Add options to the command instance
+                    getPoints.ClearCommandOptions();
+                    getPoints.AddOptionDouble("Height", ref heighOption);
+                    getPoints.AddOptionDouble("Thickness", ref thicknessOption);
+                    int optList = getPoints.AddOptionList("Alignment", listValues, listIndex);
+                    int optFromCurve = getPoints.AddOption("FromCurve");
+
+                    GetResult getResult = getPoints.Get();
+
+                    if (getResult == GetResult.Point)
                     {
-                        selectedAlignment = listValues[getPoints.Option().CurrentListOptionIndex];
-                        listIndex = getPoints.Option().CurrentListOptionIndex;
-                        // RhinoApp.WriteLine($"Debug RunCommand: selectedAlignment updated to '{selectedAlignment}' after option selection.");
+                        points.Add(getPoints.Point());
+                        doc.Views.Redraw();
                         continue;
                     }
-
-                    else if (getPoints.Option().Index == optFromCurve)
+                    else if (getResult == GetResult.Option)
                     {
-                        useExistingCurve = true;
+                        if (getPoints.Option().Index == optList)
+                        {
+                            selectedAlignment = listValues[getPoints.Option().CurrentListOptionIndex];
+                            listIndex = getPoints.Option().CurrentListOptionIndex;
+                            // RhinoApp.WriteLine($"Debug RunCommand: selectedAlignment updated to '{selectedAlignment}' after option selection.");
+                            continue;
+                        }
+
+                        else if (getPoints.Option().Index == optFromCurve)
+                        {
+                            useExistingCurve = true;
+                            currentState = CommandState.SelectCurve;
+                            continue;
+                        }
+                    }
+                    else if (getResult == GetResult.Nothing)
+                    {
+                        // RhinoApp.WriteLine($"Debug RunCommand: GetResult.Nothing received. Breaking loop. Final selectedAlignment before break: '{selectedAlignment}'");
                         break;
                     }
-                }
-                else if (getResult == GetResult.Nothing)
-                {
-                    // RhinoApp.WriteLine($"Debug RunCommand: GetResult.Nothing received. Breaking loop. Final selectedAlignment before break: '{selectedAlignment}'");
-                    break;
-                }
-                else if (getResult == GetResult.Cancel)
-                {
-                    RhinoApp.WriteLine("Command was cancelled");
-                    return Result.Cancel;
-                }
-                else
-                {
-                    RhinoApp.WriteLine($"Unexpected input result: {getResult}");
-                    return Result.Failure;
-                }
-            }
+                    else if (getResult == GetResult.Cancel)
+                    {
+                        RhinoApp.WriteLine("Command was cancelled");
+                        return Result.Cancel;
+                    }
+                    else
+                    {
+                        RhinoApp.WriteLine($"Unexpected input result: {getResult}");
+                        return Result.Failure;
+                    }
 
-            // Unsubscribe from event handler
-            getPoints.DynamicDraw -= dynamicDrawHandler;
+                    // Unsubscribe from event handler
+                    getPoints.DynamicDraw -= dynamicDrawHandler;
 
-            //RhinoApp.WriteLine($"Debug RunCommand: Loop broken. selectedAlignment before calling OffsetPolyline: '{selectedAlignment}'");
+                    //Check if enough points were selected
+                    if (points.Count < 2)
+                    {
+                        RhinoApp.WriteLine("Not enough points selected to generate wall, at least 2 points are required");
+                        return Result.Failure;
 
-            if (useExistingCurve)
-            {
-                Rhino.Input.Custom.GetObject getObject = new Rhino.Input.Custom.GetObject();
-                getObject.SetCommandPrompt("Select existing curve for wall path");
-                getObject.GeometryFilter = Rhino.DocObjects.ObjectType.Curve;
-                getObject.DeselectAllBeforePostSelect = false;
-                getObject.EnablePreSelect(true, true);
-                getObject.AddOptionToggle("DeleteInput", ref deleteInput);
-               
-                while (true)
+                    }
+
+                    inputCurve = new PolylineCurve(points);
+
+
+
+                }
+
+                if (currentState == CommandState.SelectCurve)
                 {
+                    Rhino.Input.Custom.GetObject getObject = new Rhino.Input.Custom.GetObject();
+                    getObject.SetCommandPrompt("Select existing curve for wall path");
+                    getObject.GeometryFilter = Rhino.DocObjects.ObjectType.Curve;
+                    getObject.DeselectAllBeforePostSelect = false;
+                    getObject.EnablePreSelect(true, true);
+                    getObject.AddOptionToggle("DeleteInput", ref deleteInput);
+                    getObject.AddOption("DrawPolyline");
+
+
                     int optList = getObject.AddOptionList("Alignment", listValues, listIndex);
 
 
@@ -175,7 +196,13 @@ namespace Architools
                             selectedAlignment = listValues[getObject.Option().CurrentListOptionIndex];
                             listIndex = getObject.Option().CurrentListOptionIndex;
                         }
-                        continue;
+
+                        else if (getObject.Option().StringOptionValue == "DrawPolyline")
+                        {
+                            currentState = CommandState.CollectPoints;
+                            continue;
+                        }
+                            continue;
                     }
 
                     else if (getObjResult == GetResult.Cancel)
@@ -189,22 +216,8 @@ namespace Architools
                         return Result.Failure;
                     }
 
-                }
-
-            }
-
-            else
-            {
-
-                //Check if enough points were selected
-                if (points.Count < 2)
-                {
-                    RhinoApp.WriteLine("Not enough points selected to generate wall, at least 2 points are required");
-                    return Result.Failure;
 
                 }
-
-                inputCurve = new PolylineCurve(points);
             }
 
             if (inputCurve.IsClosed)
@@ -227,7 +240,7 @@ namespace Architools
                 {
                     doc.Objects.AddBrep(wallBrep); // Use AddBrep or Add(Brep)
                     if (deleteInput.CurrentValue)
-                        { RhinoDoc.ActiveDoc.Objects.Delete(inputObject.ObjectId, false); }
+                    { RhinoDoc.ActiveDoc.Objects.Delete(inputObject.ObjectId, false); }
                     doc.Views.Redraw();
                 }
                 else
