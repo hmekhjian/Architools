@@ -80,12 +80,12 @@ namespace Architools
                     e_draw.Display.DrawPoint(e_draw.CurrentPoint, PointStyle.Chevron, 3, System.Drawing.Color.Green);
                 }
                 // If you want to always show the current mouse point, even before the first pick:
-                // else { e_draw.Display.DrawPoint(e_draw.CurrentPoint, PointStyle.Cross, 2, System.Drawing.Color.LightGray); }
+                else { e_draw.Display.DrawPoint(e_draw.CurrentPoint, PointStyle.X, 2, System.Drawing.Color.LightGray); }
             };
 
 
             //Subscribe to dynamic draw event handler
-            getPoints.DynamicDraw += dynamicDrawHandler;
+            //getPoints.DynamicDraw += dynamicDrawHandler;
 
             while (true)
             {
@@ -95,8 +95,8 @@ namespace Architools
                                        ? "Select first point of the wall"
                                        : "Select next point of the wall or press Enter when done";
                     getPoints.SetCommandPrompt(prompt);
-                    getPoints.DynamicDraw += (sender
-                        , e) => e.Display.DrawPolyline(points, System.Drawing.Color.DarkRed);
+                    // getPoints.DynamicDraw += (sender
+                    //    , e) => e.Display.DrawPolyline(points, System.Drawing.Color.DarkRed);
 
 
                     //Add options to the command instance
@@ -106,7 +106,12 @@ namespace Architools
                     int optList = getPoints.AddOptionList("Alignment", listValues, listIndex);
                     int optFromCurve = getPoints.AddOption("FromCurve");
 
+                    getPoints.DynamicDraw += dynamicDrawHandler;
+
                     GetResult getResult = getPoints.Get();
+
+                    getPoints.DynamicDraw -= dynamicDrawHandler;
+
 
                     if (getResult == GetResult.Point)
                     {
@@ -133,7 +138,15 @@ namespace Architools
                     }
                     else if (getResult == GetResult.Nothing)
                     {
-                        // RhinoApp.WriteLine($"Debug RunCommand: GetResult.Nothing received. Breaking loop. Final selectedAlignment before break: '{selectedAlignment}'");
+                        //Check if enough points were selected
+                        if (points.Count < 2)
+                        {
+                            RhinoApp.WriteLine("Not enough points selected to generate wall, at least 2 points are required");
+                            return Result.Failure;
+                        }
+
+                        inputCurve = new PolylineCurve(points);
+
                         break;
                     }
                     else if (getResult == GetResult.Cancel)
@@ -147,18 +160,8 @@ namespace Architools
                         return Result.Failure;
                     }
 
-                    // Unsubscribe from event handler
-                    getPoints.DynamicDraw -= dynamicDrawHandler;
 
-                    //Check if enough points were selected
-                    if (points.Count < 2)
-                    {
-                        RhinoApp.WriteLine("Not enough points selected to generate wall, at least 2 points are required");
-                        return Result.Failure;
 
-                    }
-
-                    inputCurve = new PolylineCurve(points);
 
 
 
@@ -171,11 +174,15 @@ namespace Architools
                     getObject.GeometryFilter = Rhino.DocObjects.ObjectType.Curve;
                     getObject.DeselectAllBeforePostSelect = false;
                     getObject.EnablePreSelect(true, true);
-                    getObject.AddOptionToggle("DeleteInput", ref deleteInput);
-                    getObject.AddOption("DrawPolyline");
-
-
+                    getObject.ClearCommandOptions();
+                    getObject.AddOptionDouble("Height", ref heighOption);
+                    getObject.AddOptionDouble("Thickness", ref thicknessOption);
                     int optList = getObject.AddOptionList("Alignment", listValues, listIndex);
+                    int optDrawPolyline = getObject.AddOption("DrawPolyline");
+                    getObject.AddOptionToggle("DeleteInput", ref deleteInput);
+
+
+
 
 
                     GetResult getObjResult = getObject.Get();
@@ -197,12 +204,13 @@ namespace Architools
                             listIndex = getObject.Option().CurrentListOptionIndex;
                         }
 
-                        else if (getObject.Option().StringOptionValue == "DrawPolyline")
+                        else if (getObject.Option().Index == optDrawPolyline)
                         {
                             currentState = CommandState.CollectPoints;
+                            doc.Objects.UnselectAll();
                             continue;
                         }
-                            continue;
+                        continue;
                     }
 
                     else if (getObjResult == GetResult.Cancel)
@@ -219,6 +227,10 @@ namespace Architools
 
                 }
             }
+
+            // Unsubscribe from event handler
+            //  getPoints.DynamicDraw -= dynamicDrawHandler;
+
 
             if (inputCurve.IsClosed)
             {
