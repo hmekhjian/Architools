@@ -31,17 +31,32 @@ namespace Architools
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-
-
             CommandState currentState = CommandState.CollectPoints;
 
-            // Define command option types
-            Rhino.Input.Custom.OptionDouble heighOption = new Rhino.Input.Custom.OptionDouble(3000, 0, 10000);
-            Rhino.Input.Custom.OptionDouble thicknessOption = new Rhino.Input.Custom.OptionDouble(300, 0, 1000);
-            string[] listValues = new string[] { "Centre", "Interior", "Exterior" };
-            int listIndex = 0;
-            Rhino.Input.Custom.OptionToggle deleteInput = new Rhino.Input.Custom.OptionToggle(false, "False", "True");
+            const string HEIGHT_KEY = "CreateWall_Height";
+            const string THICKNESS_KEY = "CreateWall_Thickness";
+            const string ALIGNMENT_KEY = "CreateWall_Alignment";
+            const string DELETE_INPUT_KEY = "CreateWall_DeleteInput";
 
+
+
+
+            double height = 3000;
+            ArchitoolsPlugin.Instance.Settings.TryGetDouble(HEIGHT_KEY, out height);
+            double thickness = 300;
+            ArchitoolsPlugin.Instance.Settings.TryGetDouble(THICKNESS_KEY, out thickness);
+            string alignment = "Centre";
+            ArchitoolsPlugin.Instance.Settings.TryGetString(ALIGNMENT_KEY, out alignment);
+            bool deleteInput = false;
+            ArchitoolsPlugin.Instance.Settings.TryGetBool(DELETE_INPUT_KEY, out deleteInput);
+
+            // Define command option types
+            Rhino.Input.Custom.OptionDouble heighOption = new Rhino.Input.Custom.OptionDouble(height, 0, 10000);
+            Rhino.Input.Custom.OptionDouble thicknessOption = new Rhino.Input.Custom.OptionDouble(thickness, 0, 1000);
+            string[] listValues = new string[] { "Centre", "Interior", "Exterior" };
+            int listIndex = Array.IndexOf(listValues, alignment);
+            if (listIndex == -1) listIndex = 0;
+            Rhino.Input.Custom.OptionToggle deleteInputToggle = new Rhino.Input.Custom.OptionToggle(deleteInput, "False", "True");
             Rhino.Input.Custom.GetPoint getPoints = new Rhino.Input.Custom.GetPoint();
             getPoints.AcceptNothing(true);
 
@@ -151,6 +166,13 @@ namespace Architools
                     }
                     else if (getResult == GetResult.Cancel)
                     {
+                        // Before exiting, save the current settings
+                        ArchitoolsPlugin.Instance.Settings.SetDouble(HEIGHT_KEY, heighOption.CurrentValue);
+                        ArchitoolsPlugin.Instance.Settings.SetDouble(THICKNESS_KEY, thicknessOption.CurrentValue);
+                        ArchitoolsPlugin.Instance.Settings.SetString(ALIGNMENT_KEY, selectedAlignment);
+                        ArchitoolsPlugin.Instance.Settings.SetBool(DELETE_INPUT_KEY, deleteInputToggle.CurrentValue);
+
+
                         RhinoApp.WriteLine("Command was cancelled");
                         return Result.Cancel;
                     }
@@ -179,7 +201,7 @@ namespace Architools
                     getObject.AddOptionDouble("Thickness", ref thicknessOption);
                     int optList = getObject.AddOptionList("Alignment", listValues, listIndex);
                     int optDrawPolyline = getObject.AddOption("DrawPolyline");
-                    getObject.AddOptionToggle("DeleteInput", ref deleteInput);
+                    getObject.AddOptionToggle("DeleteInput", ref deleteInputToggle);
 
 
 
@@ -215,6 +237,12 @@ namespace Architools
 
                     else if (getObjResult == GetResult.Cancel)
                     {
+                        // Before exiting, save the current settings
+                        ArchitoolsPlugin.Instance.Settings.SetDouble(HEIGHT_KEY, heighOption.CurrentValue);
+                        ArchitoolsPlugin.Instance.Settings.SetDouble(THICKNESS_KEY, thicknessOption.CurrentValue);
+                        ArchitoolsPlugin.Instance.Settings.SetString(ALIGNMENT_KEY, selectedAlignment);
+                        ArchitoolsPlugin.Instance.Settings.SetBool(DELETE_INPUT_KEY, deleteInputToggle.CurrentValue);
+
                         RhinoApp.WriteLine("Command was cancelled");
                         return Result.Cancel;
                     }
@@ -251,7 +279,7 @@ namespace Architools
                 if (wallBrep != null)
                 {
                     doc.Objects.AddBrep(wallBrep); // Use AddBrep or Add(Brep)
-                    if (deleteInput.CurrentValue)
+                    if (deleteInputToggle.CurrentValue)
                     { RhinoDoc.ActiveDoc.Objects.Delete(inputObject.ObjectId, false); }
                     doc.Views.Redraw();
                 }
@@ -266,7 +294,14 @@ namespace Architools
             }
 
 
+            // Before exiting, save the current settings
+            ArchitoolsPlugin.Instance.Settings.SetDouble(HEIGHT_KEY, heighOption.CurrentValue);
+            ArchitoolsPlugin.Instance.Settings.SetDouble(THICKNESS_KEY, thicknessOption.CurrentValue);
+            ArchitoolsPlugin.Instance.Settings.SetString(ALIGNMENT_KEY, selectedAlignment);
+            ArchitoolsPlugin.Instance.Settings.SetBool(DELETE_INPUT_KEY, deleteInputToggle.CurrentValue);
+
             return Result.Success;
+
         }
     }
 }
