@@ -38,12 +38,9 @@ namespace Architools
             const string ALIGNMENT_KEY = "CreateWall_Alignment";
             const string DELETE_INPUT_KEY = "CreateWall_DeleteInput";
 
-
-
-
-            double height = 3000;
+            double height = PluginUtils.ConvertToDocumentUnits(doc, 3000);
             ArchitoolsPlugin.Instance.Settings.TryGetDouble(HEIGHT_KEY, out height);
-            double thickness = 300;
+            double thickness = PluginUtils.ConvertToDocumentUnits(doc, 300);
             ArchitoolsPlugin.Instance.Settings.TryGetDouble(THICKNESS_KEY, out thickness);
             string alignment = "Centre";
             ArchitoolsPlugin.Instance.Settings.TryGetString(ALIGNMENT_KEY, out alignment);
@@ -51,8 +48,8 @@ namespace Architools
             ArchitoolsPlugin.Instance.Settings.TryGetBool(DELETE_INPUT_KEY, out deleteInput);
 
             // Define command option types
-            Rhino.Input.Custom.OptionDouble heighOption = new Rhino.Input.Custom.OptionDouble(height, 0, 10000);
-            Rhino.Input.Custom.OptionDouble thicknessOption = new Rhino.Input.Custom.OptionDouble(thickness, 0, 1000);
+            Rhino.Input.Custom.OptionDouble heighOption = new Rhino.Input.Custom.OptionDouble(height);
+            Rhino.Input.Custom.OptionDouble thicknessOption = new Rhino.Input.Custom.OptionDouble(thickness);
             string[] listValues = new string[] { "Centre", "Interior", "Exterior" };
             int listIndex = Array.IndexOf(listValues, alignment);
             if (listIndex == -1) listIndex = 0;
@@ -62,7 +59,6 @@ namespace Architools
 
             List<Point3d> points = new List<Point3d>();
             string selectedAlignment = listValues[0];
-            bool useExistingCurve = false;
             ObjRef inputObject = null;
             Curve inputCurve = null;
             Brep Wall = null;
@@ -262,13 +258,13 @@ namespace Architools
 
             if (inputCurve.IsClosed)
             {
-                Curve[] WallPathOffsets = GeometryHelpers.OffsetClosedPolyline(inputCurve, Plane.WorldXY, thicknessOption.CurrentValue, 0.1, selectedAlignment);
+                Curve[] WallPathOffsets = GeometryHelpers.OffsetClosedPolyline(inputCurve, Plane.WorldXY, thicknessOption.CurrentValue, doc.ModelAbsoluteTolerance, selectedAlignment);
                 Wall = GeometryHelpers.ExtrudeClosedCurves(WallPathOffsets, Plane.WorldXY, heighOption.CurrentValue, true, selectedAlignment);
 
             }
             else
             {
-                Curve WallPathOffset = GeometryHelpers.OffsetOpenPolyline(inputCurve, Plane.WorldXY, thicknessOption.CurrentValue, 0.1, selectedAlignment);
+                Curve WallPathOffset = GeometryHelpers.OffsetOpenPolyline(inputCurve, Plane.WorldXY, thicknessOption.CurrentValue, doc.ModelAbsoluteTolerance, selectedAlignment);
                 Wall = GeometryHelpers.ExtrudeOpenCurve(WallPathOffset, Plane.WorldXY, heighOption.CurrentValue, true).ToBrep();
             }
 

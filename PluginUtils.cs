@@ -8,8 +8,16 @@ using Rhino.PlugIns;
 
 namespace Architools
 {
-    internal class PluginUtils
+    internal static class PluginUtils
     {
+        public static double ConvertToDocumentUnits(RhinoDoc doc, double valueInMillimeters)
+        {
+            if (doc == null) return valueInMillimeters;
+            UnitSystem docUnits = doc.ModelUnitSystem;
+            double scale = RhinoMath.UnitScale(UnitSystem.Millimeters, docUnits);
+
+            return scale * valueInMillimeters;
+        }
 
     }
 }
