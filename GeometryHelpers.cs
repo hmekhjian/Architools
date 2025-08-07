@@ -14,13 +14,30 @@ namespace Architools
         {
             RhinoApp.WriteLine($"Alignment received in OffsetPolyline: '{alignment}'");
             Curve OffsetResult = null;
+
+            
+            if (curve == null || curve.GetLength() < tolerance)
+            {
+                return null;
+            }
+
             if (alignment == "Centre")
             {
                 double halfDistance = distance / 2.0;
                 Curve[] OffsetCurveArrayLeft = curve.Offset(plane, halfDistance, tolerance, CurveOffsetCornerStyle.Sharp);
+
+                // If the offset fails, OffsetCurveArrayLeft will be null or empty.
+                if (OffsetCurveArrayLeft == null || OffsetCurveArrayLeft.Length < 1)
+                {
+                    return null; 
+                }
                 Curve OffsetCurveLeft = OffsetCurveArrayLeft[0];
 
                 Curve[] OffsetCurveArrayRight = curve.Offset(plane, -halfDistance, tolerance, CurveOffsetCornerStyle.Sharp);
+
+                if (OffsetCurveArrayRight == null || OffsetCurveArrayRight.Length < 1)
+                {
+                    return null;                }
                 Curve OffsetCurveRight = OffsetCurveArrayRight[0];
 
                 Curve CurveSegmentLeft = new Line(OffsetCurveLeft.PointAtStart, OffsetCurveRight.PointAtStart).ToNurbsCurve();
@@ -28,21 +45,36 @@ namespace Architools
 
                 Curve[] CurveCollection = new Curve[] { OffsetCurveLeft, OffsetCurveRight, CurveSegmentLeft, CurveSegmentRight };
                 Curve[] OffsetResultArray = Curve.JoinCurves(CurveCollection);
+
+                if (OffsetResultArray == null || OffsetResultArray.Length < 1)
+                {
+                    return null;
+                }
                 OffsetResult = OffsetResultArray[0];
             }
-
-            else
+            else 
             {
                 if (alignment == "Interior")
                 {
                     distance = -distance;
                 }
                 Curve[] OffsetCurveArray = curve.Offset(plane, -distance, tolerance, CurveOffsetCornerStyle.Sharp);
+
+                if (OffsetCurveArray == null || OffsetCurveArray.Length < 1)
+                {
+                    return null; 
+                }
                 Curve OffsetCurve = OffsetCurveArray[0];
+
                 Curve LineSegment1 = new Line(curve.PointAtStart, OffsetCurve.PointAtStart).ToNurbsCurve();
                 Curve LineSegment2 = new Line(curve.PointAtEnd, OffsetCurve.PointAtEnd).ToNurbsCurve();
                 Curve[] CurveCollection = new Curve[] { curve, OffsetCurve, LineSegment1, LineSegment2 };
                 Curve[] OffsetResultArray = Curve.JoinCurves(CurveCollection);
+
+                if (OffsetResultArray == null || OffsetResultArray.Length < 1)
+                {
+                    return null;
+                }
                 OffsetResult = OffsetResultArray[0];
             }
 
@@ -130,27 +162,12 @@ namespace Architools
             Brep CurveExtrusion = Extrusion.Create(inputCurves[1], plane, height, cap).ToBrep();
             Brep[] ExtrusionResultArray = null;
 
+            ExtrusionResultArray = Brep.CreateBooleanDifference(OffsetExtrusion, CurveExtrusion, 0.1);
 
-            //Debug Extrusions
-            //RhinoDoc.ActiveDoc.Objects.AddBrep(Extrusion1);
-            //RhinoDoc.ActiveDoc.Objects.AddBrep(Extrusion2);
-            //RhinoDoc.ActiveDoc.Views.Redraw();
-
-            if (alignment == "Centre")
+            if (ExtrusionResultArray == null || ExtrusionResultArray.Length < 1)
             {
-                RhinoApp.WriteLine($"{alignment}");
-                ExtrusionResultArray = Brep.CreateBooleanDifference(CurveExtrusion, OffsetExtrusion, 0.1);
-            }
-
-            else if (alignment == "Interior")
-            {
-
-                ExtrusionResultArray = Brep.CreateBooleanDifference(CurveExtrusion, OffsetExtrusion, 0.1);
-            }
-            else
-            {
-                RhinoApp.WriteLine($"{alignment}");
-                ExtrusionResultArray = Brep.CreateBooleanDifference(OffsetExtrusion, CurveExtrusion, 0.1);
+                RhinoApp.WriteLine("Warning: Wall creation failed. The boolean difference resulted in no objects.");
+                return null;
             }
 
             Brep ExtrusionResult = ExtrusionResultArray[0];

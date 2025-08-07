@@ -59,44 +59,50 @@ namespace Architools
 
             List<Point3d> points = new List<Point3d>();
             string selectedAlignment = listValues[0];
+            bool useExistingCurve = false;
             ObjRef inputObject = null;
             Curve inputCurve = null;
             Brep Wall = null;
 
 
-            //RhinoApp.WriteLine($"Debug RunCommand: Initial selectedAlignment: '{selectedAlignment}'");
             // TODO Fix dynamic drawing to show the actual 3D volume
-            System.EventHandler<Rhino.Input.Custom.GetPointDrawEventArgs> dynamicDrawHandler = (sender, e_draw) =>
+            System.EventHandler<Rhino.Input.Custom.GetPointDrawEventArgs> dynamicDrawHandler = (sender, e) =>
             {
                 List<Point3d> previewPoints = new List<Point3d>(points);
                 if (points.Count > 0)
                 {
-                    previewPoints.Add(e_draw.CurrentPoint);
+                    previewPoints.Add(e.CurrentPoint);
                 }
 
-                if (previewPoints.Count >= 2) // This check ensures at least one segment can be drawn
+                if (previewPoints.Count < 2)
                 {
-                    e_draw.Display.DrawPolyline(previewPoints, System.Drawing.Color.DarkRed, 2);
+                    return;
                 }
 
-                // Optionally, draw all individually picked points for better visual feedback.
-                foreach (Point3d pt in points)
+
+                try
                 {
-                    e_draw.Display.DrawPoint(pt, PointStyle.ControlPoint, 3, System.Drawing.Color.Blue);
+                    Curve previewCurve = new PolylineCurve(previewPoints);
+                    Curve wallPathOffset = GeometryHelpers.OffsetOpenPolyline(previewCurve, Plane.WorldXY, thicknessOption.CurrentValue, doc.ModelAbsoluteTolerance, selectedAlignment);
+                    if (wallPathOffset == null)
+                    {
+                        return; // Nothing to draw, so exit the handler for this frame.
+                    }
+                    Brep wallPreview = GeometryHelpers.ExtrudeOpenCurve(wallPathOffset, Plane.WorldXY, heighOption.CurrentValue, true).ToBrep();
+
+                    if (wallPreview != null)
+                    {
+                        e.Display.DrawBrepWires(wallPreview, System.Drawing.Color.DarkRed, 1);
+                    }
                 }
 
-                // Optionally, draw the current mouse cursor point if a polyline is being actively drawn.
-                if (points.Count > 0)
+                catch (Exception ex)
                 {
-                    e_draw.Display.DrawPoint(e_draw.CurrentPoint, PointStyle.Chevron, 3, System.Drawing.Color.Green);
+                    RhinoApp.WriteLine($"Error in dynamic draw: {ex.Message}");
                 }
-                // If you want to always show the current mouse point, even before the first pick:
-                else { e_draw.Display.DrawPoint(e_draw.CurrentPoint, PointStyle.X, 2, System.Drawing.Color.LightGray); }
+
             };
 
-
-            //Subscribe to dynamic draw event handler
-            //getPoints.DynamicDraw += dynamicDrawHandler;
 
             while (true)
             {
@@ -275,7 +281,7 @@ namespace Architools
                 if (wallBrep != null)
                 {
                     doc.Objects.AddBrep(wallBrep); // Use AddBrep or Add(Brep)
-                    if (deleteInputToggle.CurrentValue)
+                    if (deleteInputToggle.CurrentValue && inputObject != null)
                     { RhinoDoc.ActiveDoc.Objects.Delete(inputObject.ObjectId, false); }
                     doc.Views.Redraw();
                 }
