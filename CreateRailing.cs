@@ -130,6 +130,18 @@ namespace Architools
                 }
 
 
+                if (inputCurve.IsClosed)
+                {
+                    Curve[] RailPathOffset = GeometryHelpers.OffsetClosedPolyline(inputCurve, Plane.WorldXY, thicknessOption.CurrentValue, doc.ModelAbsoluteTolerance, selectedAlingment);
+
+                }
+
+                else
+                {
+                    Curve RailPathOffset = GeometryHelpers.OffsetOpenPolyline(inputCurve, Plane.WorldXY, thicknessOption.CurrentValue, doc.ModelAbsoluteTolerance, selectedAlingment);
+                    Point3d 
+                }
+
                 // TODO: complete command.
                 return Result.Success;
             }
