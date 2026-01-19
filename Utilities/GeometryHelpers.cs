@@ -6,7 +6,7 @@ using System.IO;
 
 
 // TODO Set all tolerances to the document tolerance not the static 0.1 value
-namespace Architools
+namespace Architools.Utilities
 {
     internal static class GeometryHelpers
     {

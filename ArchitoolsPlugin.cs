@@ -20,7 +20,8 @@ namespace Architools
 
         ///<summary>Gets the only instance of the ArchitoolsPlugin plug-in.</summary>
         public static ArchitoolsPlugin Instance { get; private set; }
-
+        public override Rhino.PlugIns.PlugInLoadTime LoadTime => Rhino.PlugIns.PlugInLoadTime.AtStartup;
+    
         // You can override methods here to change the plug-in behavior on
         // loading and shut down, add options pages to the Rhino _Option command
         // and maintain plug-in wide options in a document.

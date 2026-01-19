@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 
-namespace Architools
+namespace Architools.Commands
 {
     public class CreateWall : Command
     {
