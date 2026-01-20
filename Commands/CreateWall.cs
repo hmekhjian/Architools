@@ -8,6 +8,8 @@ using Rhino.Input.Custom;
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using Architools.Models;
+using Architools.Utilities;
 
 namespace Architools.Commands
 {
@@ -33,27 +35,16 @@ namespace Architools.Commands
         {
             CommandState currentState = CommandState.CollectPoints;
 
-            const string HEIGHT_KEY = "CreateWall_Height";
-            const string THICKNESS_KEY = "CreateWall_Thickness";
-            const string ALIGNMENT_KEY = "CreateWall_Alignment";
-            const string DELETE_INPUT_KEY = "CreateWall_DeleteInput";
-
-            double height = PluginUtils.ConvertToDocumentUnits(doc, 3000);
-            ArchitoolsPlugin.Instance.Settings.TryGetDouble(HEIGHT_KEY, out height);
-            double thickness = PluginUtils.ConvertToDocumentUnits(doc, 300);
-            ArchitoolsPlugin.Instance.Settings.TryGetDouble(THICKNESS_KEY, out thickness);
-            string alignment = "Centre";
-            ArchitoolsPlugin.Instance.Settings.TryGetString(ALIGNMENT_KEY, out alignment);
-            bool deleteInput = false;
-            ArchitoolsPlugin.Instance.Settings.TryGetBool(DELETE_INPUT_KEY, out deleteInput);
+            WallSettings settings = new WallSettings();
+            settings.Load(doc);
 
             // Define command option types
-            Rhino.Input.Custom.OptionDouble heighOption = new Rhino.Input.Custom.OptionDouble(height);
-            Rhino.Input.Custom.OptionDouble thicknessOption = new Rhino.Input.Custom.OptionDouble(thickness);
+            Rhino.Input.Custom.OptionDouble heighOption = new Rhino.Input.Custom.OptionDouble(settings.Height);
+            Rhino.Input.Custom.OptionDouble thicknessOption = new Rhino.Input.Custom.OptionDouble(settings.Thickness);
             string[] listValues = new string[] { "Centre", "Interior", "Exterior" };
-            int listIndex = Array.IndexOf(listValues, alignment);
+            int listIndex = Array.IndexOf(listValues, settings.Alignment);
             if (listIndex == -1) listIndex = 0;
-            Rhino.Input.Custom.OptionToggle deleteInputToggle = new Rhino.Input.Custom.OptionToggle(deleteInput, "False", "True");
+            Rhino.Input.Custom.OptionToggle deleteInputToggle = new Rhino.Input.Custom.OptionToggle(settings.DeleteInput, "False", "True");
             Rhino.Input.Custom.GetPoint getPoints = new Rhino.Input.Custom.GetPoint();
             getPoints.AcceptNothing(true);
 
@@ -169,10 +160,7 @@ namespace Architools.Commands
                     else if (getResult == GetResult.Cancel)
                     {
                         // Before exiting, save the current settings
-                        ArchitoolsPlugin.Instance.Settings.SetDouble(HEIGHT_KEY, heighOption.CurrentValue);
-                        ArchitoolsPlugin.Instance.Settings.SetDouble(THICKNESS_KEY, thicknessOption.CurrentValue);
-                        ArchitoolsPlugin.Instance.Settings.SetString(ALIGNMENT_KEY, selectedAlignment);
-                        ArchitoolsPlugin.Instance.Settings.SetBool(DELETE_INPUT_KEY, deleteInputToggle.CurrentValue);
+                       settings.Save(); 
 
 
                         RhinoApp.WriteLine("Command was cancelled");
@@ -240,10 +228,7 @@ namespace Architools.Commands
                     else if (getObjResult == GetResult.Cancel)
                     {
                         // Before exiting, save the current settings
-                        ArchitoolsPlugin.Instance.Settings.SetDouble(HEIGHT_KEY, heighOption.CurrentValue);
-                        ArchitoolsPlugin.Instance.Settings.SetDouble(THICKNESS_KEY, thicknessOption.CurrentValue);
-                        ArchitoolsPlugin.Instance.Settings.SetString(ALIGNMENT_KEY, selectedAlignment);
-                        ArchitoolsPlugin.Instance.Settings.SetBool(DELETE_INPUT_KEY, deleteInputToggle.CurrentValue);
+                       settings.Save();
 
                         RhinoApp.WriteLine("Command was cancelled");
                         return Result.Cancel;
@@ -297,10 +282,7 @@ namespace Architools.Commands
 
 
             // Before exiting, save the current settings
-            ArchitoolsPlugin.Instance.Settings.SetDouble(HEIGHT_KEY, heighOption.CurrentValue);
-            ArchitoolsPlugin.Instance.Settings.SetDouble(THICKNESS_KEY, thicknessOption.CurrentValue);
-            ArchitoolsPlugin.Instance.Settings.SetString(ALIGNMENT_KEY, selectedAlignment);
-            ArchitoolsPlugin.Instance.Settings.SetBool(DELETE_INPUT_KEY, deleteInputToggle.CurrentValue);
+           settings.Save(); 
 
             return Result.Success;
 
