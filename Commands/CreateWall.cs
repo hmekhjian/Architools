@@ -8,6 +8,7 @@ using Rhino.Input.Custom;
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using Architools.Inputs;
 using Architools.Models;
 using Architools.Utilities;
 
@@ -38,13 +39,8 @@ namespace Architools.Commands
             WallSettings settings = new WallSettings();
             settings.Load(doc);
 
-            // Define command option types
-            Rhino.Input.Custom.OptionDouble heighOption = new Rhino.Input.Custom.OptionDouble(settings.Height);
-            Rhino.Input.Custom.OptionDouble thicknessOption = new Rhino.Input.Custom.OptionDouble(settings.Thickness);
-            string[] listValues = new string[] { "Centre", "Interior", "Exterior" };
-            int listIndex = Array.IndexOf(listValues, settings.Alignment);
-            if (listIndex == -1) listIndex = 0;
-            Rhino.Input.Custom.OptionToggle deleteInputToggle = new Rhino.Input.Custom.OptionToggle(settings.DeleteInput, "False", "True");
+            WallInput input = new WallInput(settings);
+            
             Rhino.Input.Custom.GetPoint getPoints = new Rhino.Input.Custom.GetPoint();
             getPoints.AcceptNothing(true);
 
@@ -56,7 +52,6 @@ namespace Architools.Commands
             Brep Wall = null;
 
 
-            // TODO Fix dynamic drawing to show the actual 3D volume
             System.EventHandler<Rhino.Input.Custom.GetPointDrawEventArgs> dynamicDrawHandler = (sender, e) =>
             {
                 List<Point3d> previewPoints = new List<Point3d>(points);
@@ -160,7 +155,8 @@ namespace Architools.Commands
                     else if (getResult == GetResult.Cancel)
                     {
                         // Before exiting, save the current settings
-                       settings.Save(); 
+                       input.SyncToSettings();
+                        settings.Save(); 
 
 
                         RhinoApp.WriteLine("Command was cancelled");
@@ -228,6 +224,7 @@ namespace Architools.Commands
                     else if (getObjResult == GetResult.Cancel)
                     {
                         // Before exiting, save the current settings
+                        input.SyncToSettings();
                        settings.Save();
 
                         RhinoApp.WriteLine("Command was cancelled");
@@ -282,6 +279,7 @@ namespace Architools.Commands
 
 
             // Before exiting, save the current settings
+           input.SyncToSettings(); 
            settings.Save(); 
 
             return Result.Success;

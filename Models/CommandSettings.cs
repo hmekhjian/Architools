@@ -1,6 +1,5 @@
 ﻿using Rhino;
 
-
 namespace Architools.Models
 {
     public abstract class CommandSettings
