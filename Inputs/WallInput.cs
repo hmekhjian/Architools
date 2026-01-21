@@ -6,9 +6,9 @@ namespace Architools.Inputs
 {
     public class WallInput
     {
-        public OptionDouble HeightOpt { get;  }
-        public OptionDouble ThicknessOpt { get; }
-        public OptionToggle DeleteInputOpt { get; }
+        public OptionDouble HeightOpt;
+        public OptionDouble ThicknessOpt;
+        public OptionToggle DeleteInputOpt; 
         
         public string[] AlignmentOptions { get; } = new string[] { "Centre", "Interior", "Exterior" };
         public int AlignmentIndex { get; set; } = 0;
